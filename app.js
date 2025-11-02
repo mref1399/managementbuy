@@ -1,6 +1,17 @@
+// تنظیمات مدیران (ID های ایتا)
+const MANAGERS = {
+    commerce: "@Mrefhh", // ID مدیر بازرگانی
+    financial: "@Mrefhh", // ID مدیر مالی
+    ceo: "@Mrefhh", // ID مدیرعامل
+    accountant: "@Mrefhh" // ID حسابدار/پرداخت‌کننده
+};
+
 // منتظر بارگذاری کامل صفحه
 document.addEventListener('DOMContentLoaded', () => {
     console.log("✅ DOM بارگذاری شد");
+
+    // بررسی نقش کاربر
+    checkUserRole();
 
     // یافتن عناصر
     const addItemBtn = document.getElementById('addItemBtn');
@@ -8,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const invoiceRadios = document.querySelectorAll('input[name="hasInvoice"]');
     const itemsTableBody = document.querySelector('#itemsTable tbody');
 
-    // بررسی وجود عناصر
     if (!addItemBtn || !purchaseForm || !itemsTableBody) {
         console.error("❌ عناصر اصلی پیدا نشد!");
         alert("خطا در بارگذاری فرم");
@@ -17,8 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // مقداردهی اولیه
     initializeForm();
-    
-    // بارگذاری داده‌های قبلی (اگر وجود دارد)
     loadSavedData();
 
     // اتصال رویدادها
@@ -32,9 +40,163 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("✅ رویدادها متصل شدند");
 });
 
+// بررسی نقش کاربر
+function checkUserRole() {
+    if (typeof Eitaa !== 'undefined' && Eitaa.jsSDK) {
+        Eitaa.jsSDK.getUserInfo((userInfo) => {
+            const userId = userInfo.userId;
+            console.log("👤 کاربر فعلی:", userId);
+            
+            // اگر کاربر یکی از مدیران باشد، لیست درخواست‌های در انتظار را نمایش بده
+            if (Object.values(MANAGERS).includes(userId)) {
+                showPendingRequests(userId);
+            }
+        });
+    }
+}
+
+// نمایش درخواست‌های در انتظار تایید
+function showPendingRequests(userId) {
+    const allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
+    const pendingRequests = allRequests.filter(req => {
+        const requestData = JSON.parse(localStorage.getItem(req.id));
+        if (!requestData) return false;
+        
+        const approval = requestData.approvalStatus;
+        
+        // بررسی اینکه آیا این مدیر باید این درخواست را تایید کند
+        if (userId === MANAGERS.commerce && !approval.commerce.approved) return true;
+        if (userId === MANAGERS.financial && approval.commerce.approved && !approval.financial.approved) return true;
+        if (userId === MANAGERS.ceo && approval.financial.approved && !approval.ceo.approved) return true;
+        if (userId === MANAGERS.accountant && approval.ceo.approved && !approval.payment.paid) return true;
+        
+        return false;
+    });
+
+    if (pendingRequests.length > 0) {
+        displayApprovalInterface(pendingRequests, userId);
+    }
+}
+
+// رابط کاربری تایید
+function displayApprovalInterface(requests, userId) {
+    const container = document.querySelector('.container');
+    const approvalSection = document.createElement('div');
+    approvalSection.className = 'approval-section';
+    approvalSection.innerHTML = `
+        <h2>📋 درخواست‌های در انتظار تایید شما</h2>
+        <div id="approvalList"></div>
+    `;
+    
+    container.insertBefore(approvalSection, container.firstChild);
+    
+    const approvalList = document.getElementById('approvalList');
+    
+    requests.forEach(req => {
+        const requestData = JSON.parse(localStorage.getItem(req.id));
+        const requestCard = document.createElement('div');
+        requestCard.className = 'approval-card';
+        requestCard.innerHTML = `
+            <div class="request-header">
+                <strong>🆔 ${req.id}</strong>
+                <span class="request-date">${req.date}</span>
+            </div>
+            <p><strong>پروژه:</strong> ${requestData.projectName}</p>
+            <p><strong>مبلغ کل:</strong> ${requestData.totalPrice.toLocaleString('fa-IR')} ریال</p>
+            <div class="approval-actions">
+                <button class="btn-approve" onclick="approveRequest('${req.id}', '${userId}')">✅ تایید</button>
+                <button class="btn-reject" onclick="rejectRequest('${req.id}', '${userId}')">❌ رد</button>
+                <button class="btn-view" onclick="viewRequestDetails('${req.id}')">👁️ مشاهده جزئیات</button>
+            </div>
+        `;
+        approvalList.appendChild(requestCard);
+    });
+}
+
+// تایید درخواست
+function approveRequest(requestId, userId) {
+    const requestData = JSON.parse(localStorage.getItem(requestId));
+    const now = new Date().toISOString();
+    
+    if (userId === MANAGERS.commerce) {
+        requestData.approvalStatus.commerce.approved = true;
+        requestData.approvalStatus.commerce.date = now;
+        alert('✅ درخواست توسط مدیر بازرگانی تایید شد');
+    } else if (userId === MANAGERS.financial) {
+        requestData.approvalStatus.financial.approved = true;
+        requestData.approvalStatus.financial.date = now;
+        alert('✅ درخواست توسط مدیر مالی تایید شد');
+    } else if (userId === MANAGERS.ceo) {
+        requestData.approvalStatus.ceo.approved = true;
+        requestData.approvalStatus.ceo.date = now;
+        alert('✅ درخواست توسط مدیرعامل تایید شد');
+    } else if (userId === MANAGERS.accountant) {
+        requestData.approvalStatus.payment.paid = true;
+        requestData.approvalStatus.payment.date = now;
+        requestData.status = 'completed';
+        alert('✅ پرداخت انجام شد - فرآیند کامل شد');
+    }
+    
+    localStorage.setItem(requestId, JSON.stringify(requestData));
+    location.reload(); // رفرش صفحه
+}
+
+// رد درخواست
+function rejectRequest(requestId, userId) {
+    const reason = prompt('دلیل رد درخواست را وارد کنید:');
+    if (!reason) return;
+    
+    const requestData = JSON.parse(localStorage.getItem(requestId));
+    requestData.status = 'rejected';
+    requestData.rejectedBy = userId;
+    requestData.rejectionReason = reason;
+    requestData.rejectionDate = new Date().toISOString();
+    
+    localStorage.setItem(requestId, JSON.stringify(requestData));
+    alert('❌ درخواست رد شد');
+    location.reload();
+}
+
+// مشاهده جزئیات
+function viewRequestDetails(requestId) {
+    const requestData = JSON.parse(localStorage.getItem(requestId));
+    
+    let itemsHTML = '<table style="width:100%; border-collapse: collapse;">';
+    itemsHTML += '<tr><th>نام کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ کل</th></tr>';
+    requestData.items.forEach(item => {
+        itemsHTML += `<tr>
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>${item.price.toLocaleString('fa-IR')}</td>
+            <td>${item.total.toLocaleString('fa-IR')}</td>
+        </tr>`;
+    });
+    itemsHTML += '</table>';
+    
+    const approvalHTML = `
+        <div style="margin-top: 20px;">
+            <h3>وضعیت تایید:</h3>
+            <p>✅ مدیر بازرگانی: ${requestData.approvalStatus.commerce.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
+            <p>✅ مدیر مالی: ${requestData.approvalStatus.financial.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
+            <p>✅ مدیرعامل: ${requestData.approvalStatus.ceo.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
+            <p>✅ پرداخت: ${requestData.approvalStatus.payment.paid ? '✔️ انجام شد' : '⏳ در انتظار'}</p>
+        </div>
+    `;
+    
+    alert(`
+📋 جزئیات درخواست ${requestId}
+
+پروژه: ${requestData.projectName}
+تاریخ: ${requestData.requestDate}
+مبلغ کل: ${requestData.totalPrice.toLocaleString('fa-IR')} ریال
+
+${itemsHTML}
+${approvalHTML}
+    `);
+}
+
 function initializeForm() {
     try {
-        // تنظیم تاریخ شمسی
         const today = new Date();
         const formatter = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
             year: 'numeric',
@@ -46,7 +208,6 @@ function initializeForm() {
         document.getElementById('requestDate').value = jalaliDate;
         console.log("✅ تاریخ شمسی تنظیم شد:", jalaliDate);
 
-        // مخفی کردن فیلد آپلود فاکتور
         toggleInvoiceUpload();
     } catch(e) {
         console.error("❌ خطا در مقداردهی اولیه:", e);
@@ -54,7 +215,6 @@ function initializeForm() {
     }
 }
 
-// ذخیره خودکار داده‌ها
 function autoSaveData() {
     try {
         const rows = document.querySelectorAll('#itemsTable tbody tr');
@@ -80,31 +240,25 @@ function autoSaveData() {
         };
 
         localStorage.setItem('purchaseRequest', JSON.stringify(formData));
-        console.log("💾 داده‌ها ذخیره شدند");
     } catch(e) {
         console.error("❌ خطا در ذخیره خودکار:", e);
     }
 }
 
-// بارگذاری داده‌های ذخیره شده
 function loadSavedData() {
     try {
         const savedData = localStorage.getItem('purchaseRequest');
         if (!savedData) return;
 
         const data = JSON.parse(savedData);
-        console.log("📂 بارگذاری داده‌های قبلی:", data);
 
-        // بازیابی فیلدها
         if (data.projectName) document.getElementById('projectName').value = data.projectName;
         if (data.description) document.getElementById('description').value = data.description;
         
-        // بازیابی وضعیت فاکتور
         const invoiceRadio = document.querySelector(`input[name="hasInvoice"][value="${data.hasInvoice}"]`);
         if (invoiceRadio) invoiceRadio.checked = true;
         toggleInvoiceUpload();
 
-        // بازیابی آیتم‌ها
         if (data.items && data.items.length > 0) {
             const tableBody = document.querySelector('#itemsTable tbody');
             tableBody.innerHTML = '';
@@ -149,7 +303,6 @@ function addItemRow() {
         e.target.closest('tr').remove();
         updateGrandTotal();
         autoSaveData();
-        console.log("🗑️ ردیف حذف شد");
     });
 
     updateRowTotal(newRow);
@@ -201,14 +354,12 @@ function submitForm(event) {
     event.preventDefault();
     console.log("📝 ثبت درخواست خرید");
 
-    // بررسی وجود آیتم
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     if (rows.length === 0) {
         alert('⚠️ لطفاً حداقل یک کالا اضافه کنید');
         return;
     }
 
-    // جمع‌آوری داده‌ها
     const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
     let grandTotal = 0;
     const items = [];
@@ -228,6 +379,9 @@ function submitForm(event) {
         });
     });
 
+    const requestId = 'REQ_' + Date.now();
+    const now = new Date().toISOString();
+    
     const formData = {
         projectName: document.getElementById('projectName').value.trim(),
         requestDate: document.getElementById('requestDate').value,
@@ -236,17 +390,19 @@ function submitForm(event) {
         items: items,
         totalPrice: grandTotal,
         status: 'pending',
-        submittedAt: new Date().toISOString()
+        submittedAt: now,
+        // ساختار تایید چند مرحله‌ای
+        approvalStatus: {
+            commerce: { approved: false, date: null, approver: MANAGERS.commerce },
+            financial: { approved: false, date: null, approver: MANAGERS.financial },
+            ceo: { approved: false, date: null, approver: MANAGERS.ceo },
+            payment: { paid: false, date: null, paidBy: MANAGERS.accountant }
+        }
     };
 
-    // ذخیره نهایی در localStorage با کلید منحصربفرد
-    const requestId = 'REQ_' + Date.now();
-    
     try {
-        // ذخیره درخواست فعلی
         localStorage.setItem(requestId, JSON.stringify(formData));
         
-        // به‌روزرسانی لیست درخواست‌ها
         let allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
         allRequests.push({
             id: requestId,
@@ -258,13 +414,10 @@ function submitForm(event) {
         });
         localStorage.setItem('allPurchaseRequests', JSON.stringify(allRequests));
 
-        // پاک کردن ذخیره موقت
         localStorage.removeItem('purchaseRequest');
 
         console.log("✅ درخواست با موفقیت ذخیره شد:", requestId);
-        console.log("📊 داده‌های ذخیره شده:", formData);
 
-        // نمایش پیام موفقیت با جزئیات
         const message = `
 ✅ درخواست با موفقیت ثبت شد!
 
@@ -273,12 +426,15 @@ function submitForm(event) {
 💰 مبلغ کل: ${grandTotal.toLocaleString('fa-IR')} ریال
 📅 تاریخ: ${formData.requestDate}
 
-درخواست شما در حالت انتظار قرار گرفت و پس از تأیید، فرآیند خرید انجام خواهد شد.
+🔄 مراحل تایید:
+1️⃣ مدیر بازرگانی - ⏳ در انتظار
+2️⃣ مدیر مالی - ⏳ در انتظار
+3️⃣ مدیرعامل - ⏳ در انتظار
+4️⃣ پرداخت - ⏳ در انتظار
         `;
         
         alert(message);
 
-        // بستن برنامک ایتا
         if (typeof Eitaa !== 'undefined' && Eitaa.jsSDK) {
             setTimeout(() => {
                 Eitaa.jsSDK.closeApp();
@@ -291,7 +447,6 @@ function submitForm(event) {
     }
 }
 
-// ذخیره خودکار هنگام تغییر فیلدها
 document.addEventListener('change', (e) => {
     if (e.target.closest('#purchaseForm')) {
         autoSaveData();
