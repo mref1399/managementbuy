@@ -1,74 +1,81 @@
-// فایل: app.js
-
-// منتظر می‌مانیم تا کل محتوای صفحه (HTML) بارگذاری شود
-// این دستور کلیدی‌ترین بخش برای حل مشکل کار نکردن دکمه‌ها است
+// منتظر بارگذاری کامل DOM
 document.addEventListener('DOMContentLoaded', () => {
-    
-    console.log("DOM کاملاً بارگذاری شد. در حال اجرای اسکریپت...");
+    console.log("DOM بارگذاری شد");
 
-    // یافتن عناصر بعد از اینکه مطمئن شدیم در صفحه وجود دارند
+    // یافتن عناصر
     const addItemBtn = document.getElementById('addItemBtn');
     const purchaseForm = document.getElementById('purchaseForm');
-    const invoiceQuestion = document.getElementById('invoiceQuestion');
+    const invoiceRadios = document.querySelectorAll('input[name="hasInvoice"]');
     const itemsTableBody = document.querySelector('#itemsTable tbody');
 
-    // بررسی اینکه آیا عناصر پیدا شده‌اند یا نه
-    if (!addItemBtn || !purchaseForm || !invoiceQuestion || !itemsTableBody) {
-        console.error("یکی از عناصر اصلی فرم پیدا نشد! کد متوقف می‌شود.");
-        alert("خطای داخلی در بارگذاری فرم. لطفاً مجدداً تلاش کنید.");
+    // بررسی وجود عناصر
+    if (!addItemBtn || !purchaseForm || !itemsTableBody) {
+        console.error("عناصر اصلی فرم پیدا نشد!");
         return;
     }
 
-    // مقداردهی اولیه فرم (تاریخ و کد پروژه)
+    // مقداردهی اولیه
     initializeForm();
 
-    // اتصال رویدادها (Event Listeners)
+    // اتصال رویدادها
     addItemBtn.addEventListener('click', addItemRow);
     purchaseForm.addEventListener('submit', submitForm);
-    invoiceQuestion.addEventListener('change', toggleInvoiceUpload);
-    itemsTableBody.addEventListener('input', handleTableInput);
     
-    console.log("رویدادها با موفقیت به عناصر متصل شدند.");
+    // رویداد تغییر رادیو باتن‌ها
+    invoiceRadios.forEach(radio => {
+        radio.addEventListener('change', toggleInvoiceUpload);
+    });
+    
+    itemsTableBody.addEventListener('input', handleTableInput);
+
+    // افزودن یک ردیف اولیه
+    addItemRow();
+
+    console.log("رویدادها متصل شدند");
 });
 
 function initializeForm() {
     try {
-        // تنظیم تاریخ جاری شمسی
-        const today = new Date();
-        const jalaliDate = new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(today);
+        // تنظیم تاریخ شمسی با استفاده از moment-jalaali
+        const jalaliDate = moment().format('jYYYY/jMM/jDD');
         document.getElementById('requestDate').value = jalaliDate;
         console.log("تاریخ تنظیم شد:", jalaliDate);
 
-        // دریافت و تنظیم کد پروژه
+        // دریافت کد پروژه از URL
         const urlParams = new URLSearchParams(window.location.search);
         const projectCode = urlParams.get('project_code') || 'تعریف نشده';
         document.getElementById('projectName').value = projectCode;
-        console.log("کد پروژه تنظیم شد:", projectCode);
+        console.log("کد پروژه:", projectCode);
 
         // مخفی کردن فیلد آپلود
         toggleInvoiceUpload();
     } catch(e) {
-        console.error("خطا در مقداردهی اولیه فرم:", e);
+        console.error("خطا در مقداردهی اولیه:", e);
     }
 }
 
 function addItemRow() {
-    console.log("دکمه افزودن ردیف کلیک شد.");
+    console.log("افزودن ردیف جدید");
     const tableBody = document.querySelector('#itemsTable tbody');
-    const newRow = tableBody.insertRow(); // روش مطمئن‌تر برای افزودن سطر
+    const newRow = tableBody.insertRow();
+    
     newRow.innerHTML = `
         <td><input type="text" name="itemName" class="form-control" required></td>
         <td><input type="number" name="quantity" class="form-control quantity" min="1" value="1" required></td>
         <td><input type="number" name="price" class="form-control price" min="0" value="0" required></td>
         <td class="total-price">0</td>
-        <td><button type="button" class="btn btn-danger btn-sm remove-item-btn">حذف</button></td>
+        <td><button type="button" class="btn-danger btn-sm remove-item-btn">حذف</button></td>
     `;
-    
-    // افزودن رویداد حذف به دکمه جدید
-    newRow.querySelector('.remove-item-btn').addEventListener('click', (e) => {
-        e.target.closest('tr').remove();
+
+    // رویداد حذف
+    const removeBtn = newRow.querySelector('.remove-item-btn');
+    removeBtn.addEventListener('click', function() {
+        newRow.remove();
         updateGrandTotal();
     });
+
+    // به‌روزرسانی جمع کل
+    updateRowTotal(newRow);
 }
 
 function handleTableInput(event) {
@@ -97,40 +104,44 @@ function updateGrandTotal() {
 }
 
 function toggleInvoiceUpload() {
-    const invoiceQuestion = document.getElementById('invoiceQuestion').value;
+    const hasInvoiceYes = document.querySelector('input[name="hasInvoice"][value="yes"]').checked;
     const fileUploadDiv = document.getElementById('fileUploadDiv');
     const fileInput = document.getElementById('invoiceFile');
-    if (invoiceQuestion === 'yes') {
-        fileUploadDiv.style.display = 'block';
+    
+    if (hasInvoiceYes) {
+        fileUploadDiv.classList.remove('hidden');
         fileInput.required = true;
     } else {
-        fileUploadDiv.style.display = 'none';
+        fileUploadDiv.classList.add('hidden');
         fileInput.required = false;
     }
 }
 
 function submitForm(event) {
     event.preventDefault();
-    console.log("فرم در حال ارسال است...");
+    console.log("ارسال فرم...");
 
-    // ... (کد جمع‌آوری داده‌ها مثل قبل باقی می‌ماند)
+    // جمع‌آوری داده‌ها
+    const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
+    
     const formData = {
         projectName: document.getElementById('projectName').value,
         requestDate: document.getElementById('requestDate').value,
-        hasInvoice: document.getElementById('invoiceQuestion').value,
+        hasInvoice: hasInvoice,
         description: document.getElementById('description').value,
         items: [],
         totalPrice: 0
     };
 
-    let grandTotal = 0;
+    // بررسی وجود آیتم
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     if (rows.length === 0) {
-        alert('لطفاً حداقل یک کالا به لیست اضافه کنید.');
-        console.warn("ارسال متوقف شد: هیچ آیتمی در جدول وجود ندارد.");
+        alert('لطفاً حداقل یک کالا اضافه کنید.');
         return;
     }
-    
+
+    // جمع‌آوری آیتم‌ها
+    let grandTotal = 0;
     rows.forEach(row => {
         const itemName = row.querySelector('input[name="itemName"]').value;
         const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
@@ -141,34 +152,46 @@ function submitForm(event) {
     });
     formData.totalPrice = grandTotal;
 
+    // غیرفعال کردن دکمه
     const submitButton = document.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.textContent = 'در حال ارسال...';
-    
+
+    // ارسال به webhook
     const n8nWebhookURL = 'https://mref1365.darkube.app/webhook-test/Buy';
-    console.log('ارسال داده به آدرس:', n8nWebhookURL);
-    console.log('محتوای ارسالی:', JSON.stringify(formData, null, 2));
+    console.log('ارسال به:', n8nWebhookURL);
+    console.log('داده:', JSON.stringify(formData, null, 2));
 
     fetch(n8nWebhookURL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData)
     })
     .then(response => {
-        console.log("پاسخ اولیه از سرور دریافت شد.", response);
+        console.log("پاسخ دریافت شد:", response.status);
         if (!response.ok) {
-            throw new Error(`خطای شبکه: ${response.status} - ${response.statusText}`);
+            throw new Error(`خطای HTTP: ${response.status}`);
         }
-        return response.json();
+        return response.text().then(text => {
+            return text ? JSON.parse(text) : {};
+        });
     })
     .then(data => {
-        console.log('پاسخ موفقیت‌آمیز از n8n:', data);
-        alert("درخواست شما با موفقیت ثبت شد.");
-        Eitaa.jsSDK.closeApp();
+        console.log('پاسخ موفق:', data);
+        alert("درخواست با موفقیت ثبت شد.");
+        
+        // بستن برنامک ایتا (اگر در ایتا باز شده باشد)
+        if (typeof Eitaa !== 'undefined' && Eitaa.jsSDK) {
+            Eitaa.jsSDK.closeApp();
+        }
     })
     .catch((error) => {
-        console.error('خطای بسیار مهم در ارسال به n8n:', error);
-        alert(`خطا در ارسال درخواست. لطفاً جزئیات خطا را بررسی کنید: ${error.message}`);
+        console.error('خطا در ارسال:', error);
+        alert(`خطا در ارسال: ${error.message}`);
+    })
+    .finally(() => {
         submitButton.disabled = false;
         submitButton.textContent = 'ثبت و ارسال درخواست';
     });
