@@ -31,15 +31,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeForm() {
     try {
+        // بررسی وجود moment-jalaali
+        if (typeof moment === 'undefined') {
+            console.error("❌ کتابخانه moment یافت نشد!");
+            alert("خطا: کتابخانه تاریخ بارگذاری نشده است");
+            return;
+        }
+
         // تنظیم تاریخ شمسی با moment-jalaali
-        const jalaliDate = moment().format('jYYYY/jMM/jDD');
+        const now = moment();
+        const jalaliYear = now.jYear();
+        const jalaliMonth = String(now.jMonth() + 1).padStart(2, '0'); // jMonth از 0 شروع می‌شود
+        const jalaliDay = String(now.jDate()).padStart(2, '0');
+        const jalaliDate = `${jalaliYear}/${jalaliMonth}/${jalaliDay}`;
+        
         document.getElementById('requestDate').value = jalaliDate;
         console.log("✅ تاریخ شمسی تنظیم شد:", jalaliDate);
+        console.log("📅 سال:", jalaliYear, "ماه:", jalaliMonth, "روز:", jalaliDay);
 
         // مخفی کردن فیلد آپلود فاکتور
         toggleInvoiceUpload();
     } catch(e) {
         console.error("❌ خطا در مقداردهی اولیه:", e);
+        // اگر moment-jalaali کار نکرد، از روش دستی استفاده کن
+        fallbackJalaliDate();
+    }
+}
+
+// روش جایگزین برای تاریخ شمسی (بدون moment-jalaali)
+function fallbackJalaliDate() {
+    try {
+        const today = new Date();
+        const formatter = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        
+        const jalaliDate = formatter.format(today).replace(/\u200F/g, '');
+        document.getElementById('requestDate').value = jalaliDate;
+        console.log("✅ تاریخ شمسی (روش جایگزین):", jalaliDate);
+    } catch(e) {
+        console.error("❌ خطا در تاریخ جایگزین:", e);
+        document.getElementById('requestDate').value = "1404/08/12";
     }
 }
 
