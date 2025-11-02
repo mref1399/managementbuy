@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برنامک نمونه ایتا</title>
+    <!-- اتصال فایل استایل (CSS) -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- کانتینر اصلی برنامه -->
+    <div class="container">
+        <header>
+            <h1>برنامک نمونه ایتا</h1>
+            <p class="subtitle">نمایش اطلاعات با JS SDK</p>
+        </header>
+
+        <!-- بخش نمایش وضعیت -->
+        <div id="status" class="status-info">در حال اتصال به ایتا...</div>
+
+        <!-- بخش نمایش اطلاعات کاربر -->
+        <div id="userInfo" class="user-info-card hidden">
+            <p><strong>نام:</strong> <span id="firstName"></span></p>
+            <p><strong>نام خانوادگی:</strong> <span id="lastName"></span></p>
+            <p><strong>نام کاربری:</strong> <span id="username"></span></p>
+        </div>
+
+        <!-- بخش دکمه‌های عملیاتی -->
+        <div class="actions">
+            <button id="getUserBtn" disabled>دریافت اطلاعات من</button>
+            <button id="closeBtn">بستن برنامک</button>
+        </div>
+    </div>
+
+    <!-- 
+      مهم‌ترین بخش: فراخوانی کیت توسعه نرم‌افزار ایتا (JS SDK) 
+      این اسکریپت باید حتما قبل از فایل app.js شما قرار بگیرد.
+    -->
+    <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
+    
+    <!-- اتصال فایل منطق برنامه (JavaScript) -->
+    <script src="app.js"></script>
+
+</body>
+</html>
 
