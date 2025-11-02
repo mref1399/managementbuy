@@ -1,9 +1,9 @@
 // تنظیمات مدیران (ID های ایتا)
 const MANAGERS = {
-    commerce: "@Mrefhh", // ID مدیر بازرگانی
-    financial: "@Mrefhh", // ID مدیر مالی
-    ceo: "@Mrefhh", // ID مدیرعامل
-    accountant: "@Mrefhh" // ID حسابدار/پرداخت‌کننده
+    commerce: "@Mrefhh",  // ✅ مدیر بازرگانی (شما)
+    financial: "@financial_manager", // 👈 ID مدیر مالی را اینجا قرار دهید
+    ceo: "@ceo_manager", // 👈 ID مدیرعامل را اینجا قرار دهید
+    accountant: "@accountant_manager" // 👈 ID حسابدار را اینجا قرار دهید
 };
 
 // منتظر بارگذاری کامل صفحه
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function checkUserRole() {
     if (typeof Eitaa !== 'undefined' && Eitaa.jsSDK) {
         Eitaa.jsSDK.getUserInfo((userInfo) => {
-            const userId = userInfo.userId;
+            const userId = `@${userInfo.username}`;  // ✅ اضافه کردن @ به username
             console.log("👤 کاربر فعلی:", userId);
             
             // اگر کاربر یکی از مدیران باشد، لیست درخواست‌های در انتظار را نمایش بده
@@ -60,7 +60,7 @@ function showPendingRequests(userId) {
     const allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
     const pendingRequests = allRequests.filter(req => {
         const requestData = JSON.parse(localStorage.getItem(req.id));
-        if (!requestData) return false;
+        if (!requestData || requestData.status === 'rejected' || requestData.status === 'completed') return false;
         
         const approval = requestData.approvalStatus;
         
@@ -83,8 +83,15 @@ function displayApprovalInterface(requests, userId) {
     const container = document.querySelector('.container');
     const approvalSection = document.createElement('div');
     approvalSection.className = 'approval-section';
+    
+    let roleTitle = '';
+    if (userId === MANAGERS.commerce) roleTitle = 'مدیر بازرگانی';
+    else if (userId === MANAGERS.financial) roleTitle = 'مدیر مالی';
+    else if (userId === MANAGERS.ceo) roleTitle = 'مدیرعامل';
+    else if (userId === MANAGERS.accountant) roleTitle = 'حسابدار';
+    
     approvalSection.innerHTML = `
-        <h2>📋 درخواست‌های در انتظار تایید شما</h2>
+        <h2>📋 درخواست‌های در انتظار تایید - ${roleTitle}</h2>
         <div id="approvalList"></div>
     `;
     
@@ -103,6 +110,7 @@ function displayApprovalInterface(requests, userId) {
             </div>
             <p><strong>پروژه:</strong> ${requestData.projectName}</p>
             <p><strong>مبلغ کل:</strong> ${requestData.totalPrice.toLocaleString('fa-IR')} ریال</p>
+            <p><strong>تعداد اقلام:</strong> ${requestData.items.length}</p>
             <div class="approval-actions">
                 <button class="btn-approve" onclick="approveRequest('${req.id}', '${userId}')">✅ تایید</button>
                 <button class="btn-reject" onclick="rejectRequest('${req.id}', '${userId}')">❌ رد</button>
@@ -121,30 +129,42 @@ function approveRequest(requestId, userId) {
     if (userId === MANAGERS.commerce) {
         requestData.approvalStatus.commerce.approved = true;
         requestData.approvalStatus.commerce.date = now;
-        alert('✅ درخواست توسط مدیر بازرگانی تایید شد');
+        alert('✅ درخواست توسط مدیر بازرگانی تایید شد\n\n📤 درخواست برای مدیر مالی ارسال شد');
     } else if (userId === MANAGERS.financial) {
         requestData.approvalStatus.financial.approved = true;
         requestData.approvalStatus.financial.date = now;
-        alert('✅ درخواست توسط مدیر مالی تایید شد');
+        alert('✅ درخواست توسط مدیر مالی تایید شد\n\n📤 درخواست برای مدیرعامل ارسال شد');
     } else if (userId === MANAGERS.ceo) {
         requestData.approvalStatus.ceo.approved = true;
         requestData.approvalStatus.ceo.date = now;
-        alert('✅ درخواست توسط مدیرعامل تایید شد');
+        alert('✅ درخواست توسط مدیرعامل تایید شد\n\n📤 درخواست برای پرداخت ارسال شد');
     } else if (userId === MANAGERS.accountant) {
         requestData.approvalStatus.payment.paid = true;
         requestData.approvalStatus.payment.date = now;
         requestData.status = 'completed';
-        alert('✅ پرداخت انجام شد - فرآیند کامل شد');
+        alert('✅ پرداخت انجام شد\n\n🎉 فرآیند کامل شد!');
     }
     
     localStorage.setItem(requestId, JSON.stringify(requestData));
-    location.reload(); // رفرش صفحه
+    
+    // به‌روزرسانی لیست کلی
+    let allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
+    const index = allRequests.findIndex(r => r.id === requestId);
+    if (index !== -1) {
+        allRequests[index].status = requestData.status;
+    }
+    localStorage.setItem('allPurchaseRequests', JSON.stringify(allRequests));
+    
+    location.reload();
 }
 
 // رد درخواست
 function rejectRequest(requestId, userId) {
-    const reason = prompt('دلیل رد درخواست را وارد کنید:');
-    if (!reason) return;
+    const reason = prompt('❌ دلیل رد درخواست را وارد کنید:');
+    if (!reason || reason.trim() === '') {
+        alert('⚠️ لطفاً دلیل رد را وارد کنید');
+        return;
+    }
     
     const requestData = JSON.parse(localStorage.getItem(requestId));
     requestData.status = 'rejected';
@@ -153,7 +173,16 @@ function rejectRequest(requestId, userId) {
     requestData.rejectionDate = new Date().toISOString();
     
     localStorage.setItem(requestId, JSON.stringify(requestData));
-    alert('❌ درخواست رد شد');
+    
+    // به‌روزرسانی لیست کلی
+    let allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
+    const index = allRequests.findIndex(r => r.id === requestId);
+    if (index !== -1) {
+        allRequests[index].status = 'rejected';
+    }
+    localStorage.setItem('allPurchaseRequests', JSON.stringify(allRequests));
+    
+    alert(`❌ درخواست رد شد\n\nدلیل: ${reason}`);
     location.reload();
 }
 
@@ -161,38 +190,42 @@ function rejectRequest(requestId, userId) {
 function viewRequestDetails(requestId) {
     const requestData = JSON.parse(localStorage.getItem(requestId));
     
-    let itemsHTML = '<table style="width:100%; border-collapse: collapse;">';
-    itemsHTML += '<tr><th>نام کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ کل</th></tr>';
-    requestData.items.forEach(item => {
-        itemsHTML += `<tr>
-            <td>${item.name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.price.toLocaleString('fa-IR')}</td>
-            <td>${item.total.toLocaleString('fa-IR')}</td>
-        </tr>`;
+    let itemsList = '';
+    requestData.items.forEach((item, index) => {
+        itemsList += `\n${index + 1}. ${item.name}\n   تعداد: ${item.quantity} | قیمت واحد: ${item.price.toLocaleString('fa-IR')} | جمع: ${item.total.toLocaleString('fa-IR')} ریال\n`;
     });
-    itemsHTML += '</table>';
     
-    const approvalHTML = `
-        <div style="margin-top: 20px;">
-            <h3>وضعیت تایید:</h3>
-            <p>✅ مدیر بازرگانی: ${requestData.approvalStatus.commerce.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
-            <p>✅ مدیر مالی: ${requestData.approvalStatus.financial.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
-            <p>✅ مدیرعامل: ${requestData.approvalStatus.ceo.approved ? '✔️ تایید شده' : '⏳ در انتظار'}</p>
-            <p>✅ پرداخت: ${requestData.approvalStatus.payment.paid ? '✔️ انجام شد' : '⏳ در انتظار'}</p>
-        </div>
+    const approvalDetails = `
+📋 وضعیت تایید:
+━━━━━━━━━━━━━━━━
+1️⃣ مدیر بازرگانی: ${requestData.approvalStatus.commerce.approved ? '✔️ تایید شده در ' + new Date(requestData.approvalStatus.commerce.date).toLocaleString('fa-IR') : '⏳ در انتظار'}
+
+2️⃣ مدیر مالی: ${requestData.approvalStatus.financial.approved ? '✔️ تایید شده در ' + new Date(requestData.approvalStatus.financial.date).toLocaleString('fa-IR') : '⏳ در انتظار'}
+
+3️⃣ مدیرعامل: ${requestData.approvalStatus.ceo.approved ? '✔️ تایید شده در ' + new Date(requestData.approvalStatus.ceo.date).toLocaleString('fa-IR') : '⏳ در انتظار'}
+
+4️⃣ پرداخت: ${requestData.approvalStatus.payment.paid ? '✔️ انجام شد در ' + new Date(requestData.approvalStatus.payment.date).toLocaleString('fa-IR') : '⏳ در انتظار'}
     `;
     
-    alert(`
-📋 جزئیات درخواست ${requestId}
+    const message = `
+📋 جزئیات درخواست
+━━━━━━━━━━━━━━━━
+🆔 شماره: ${requestId}
+📦 پروژه: ${requestData.projectName}
+📅 تاریخ: ${requestData.requestDate}
+💰 مبلغ کل: ${requestData.totalPrice.toLocaleString('fa-IR')} ریال
+📄 فاکتور: ${requestData.hasInvoice === 'yes' ? 'دارد' : 'ندارد'}
 
-پروژه: ${requestData.projectName}
-تاریخ: ${requestData.requestDate}
-مبلغ کل: ${requestData.totalPrice.toLocaleString('fa-IR')} ریال
+📦 اقلام:${itemsList}
 
-${itemsHTML}
-${approvalHTML}
-    `);
+${approvalDetails}
+
+${requestData.status === 'rejected' ? `\n❌ درخواست رد شده\nدلیل: ${requestData.rejectionReason}\nتوسط: ${requestData.rejectedBy}` : ''}
+
+📝 توضیحات: ${requestData.description || 'ندارد'}
+    `;
+    
+    alert(message);
 }
 
 function initializeForm() {
@@ -233,13 +266,14 @@ function autoSaveData() {
         const formData = {
             projectName: document.getElementById('projectName').value.trim(),
             requestDate: document.getElementById('requestDate').value,
-            hasInvoice: document.querySelector('input[name="hasInvoice"]:checked').value,
+            hasInvoice: document.querySelector('input[name="hasInvoice"]:checked')?.value || 'no',
             description: document.getElementById('description').value.trim(),
             items: items,
             savedAt: new Date().toISOString()
         };
 
         localStorage.setItem('purchaseRequest', JSON.stringify(formData));
+        console.log("💾 ذخیره خودکار انجام شد");
     } catch(e) {
         console.error("❌ خطا در ذخیره خودکار:", e);
     }
@@ -282,6 +316,8 @@ function loadSavedData() {
 
             updateGrandTotal();
         }
+        
+        console.log("✅ داده‌های ذخیره شده بازیابی شد");
     } catch(e) {
         console.error("❌ خطا در بارگذاری داده‌ها:", e);
     }
@@ -336,7 +372,7 @@ function updateGrandTotal() {
 }
 
 function toggleInvoiceUpload() {
-    const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
+    const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked')?.value || 'no';
     const fileUploadDiv = document.getElementById('fileUploadDiv');
     const fileInput = document.getElementById('invoiceFile');
     
@@ -347,7 +383,6 @@ function toggleInvoiceUpload() {
         fileUploadDiv.classList.add('hidden');
         fileInput.required = false;
     }
-    autoSaveData();
 }
 
 function submitForm(event) {
@@ -391,7 +426,6 @@ function submitForm(event) {
         totalPrice: grandTotal,
         status: 'pending',
         submittedAt: now,
-        // ساختار تایید چند مرحله‌ای
         approvalStatus: {
             commerce: { approved: false, date: null, approver: MANAGERS.commerce },
             financial: { approved: false, date: null, approver: MANAGERS.financial },
@@ -427,7 +461,7 @@ function submitForm(event) {
 📅 تاریخ: ${formData.requestDate}
 
 🔄 مراحل تایید:
-1️⃣ مدیر بازرگانی - ⏳ در انتظار
+1️⃣ مدیر بازرگانی (@Mrefhh) - ⏳ در انتظار
 2️⃣ مدیر مالی - ⏳ در انتظار
 3️⃣ مدیرعامل - ⏳ در انتظار
 4️⃣ پرداخت - ⏳ در انتظار
@@ -447,6 +481,7 @@ function submitForm(event) {
     }
 }
 
+// ذخیره خودکار هنگام تغییر فرم
 document.addEventListener('change', (e) => {
     if (e.target.closest('#purchaseForm')) {
         autoSaveData();
