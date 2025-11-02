@@ -1,27 +1,34 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // مقداردهی اولیه SDK ایتا (اختیاری برای این فرم، اما روش استاندارد است)
+    // مقداردهی اولیه SDK ایتا
     eitaa.init({
         onReady: () => console.log('Eitaa SDK is ready.'),
         onError: (err) => console.error('Eitaa SDK init error:', err)
     });
 
-    // گرفتن ارجاع به عناصر HTML
-    const projectCodeInput = document.getElementById('projectCode');
-    const currentDateSpan = document.getElementById('currentDate');
+    // --- گرفتن ارجاع به عناصر HTML ---
     const addItemBtn = document.getElementById('addItemBtn');
     const tableBody = document.getElementById('purchaseTableBody');
     const grandTotalSpan = document.getElementById('grandTotal');
     const submitBtn = document.getElementById('submitBtn');
     const closeBtn = document.getElementById('closeBtn');
+    const currentDateSpan = document.getElementById('currentDate');
+    const projectCodeInput = document.getElementById('projectCode');
+    
+    // عناصر جدید مربوط به فاکتور
+    const invoiceYesRadio = document.getElementById('invoiceYes');
+    const invoiceNoRadio = document.getElementById('invoiceNo');
+    const fileUploadWrapper = document.getElementById('fileUploadWrapper');
+    const invoiceFileInput = document.getElementById('invoiceFile');
 
     // 1. تنظیم تاریخ شمسی روز جاری
-    // از API استاندارد مرورگر برای نمایش تاریخ شمسی استفاده می‌کنیم.
     currentDateSpan.textContent = new Date().toLocaleDateString('fa-IR-u-nu-latn');
 
-    // 2. رویداد کلیک برای افزودن سطر جدید به جدول
-    addItemBtn.addEventListener('click', function () {
-        const newRow = tableBody.insertRow(); // یک <tr> جدید ایجاد می‌کند
+    // --- مدیریت رویدادها ---
 
+    // 2. رویداد کلیک برای افزودن سطر جدید (مشکل حل شده)
+    addItemBtn.addEventListener('click', function () {
+        console.log("Add Item button clicked!"); // برای اشکال‌زدایی
+        const newRow = tableBody.insertRow();
         newRow.innerHTML = `
             <td><input type="text" class="item-title" placeholder="نام کالا"></td>
             <td><input type="number" class="item-quantity" value="1" min="1"></td>
@@ -31,76 +38,48 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
     });
 
-    // 3. استفاده از Event Delegation برای مدیریت رویدادهای داخل جدول
-    tableBody.addEventListener('input', function (e) {
-        // این رویداد زمانی اجرا می‌شود که کاربر در یکی از input های تعداد یا قیمت تایپ کند
-        if (e.target.classList.contains('item-quantity') || e.target.classList.contains('item-unit-price')) {
-            const row = e.target.closest('tr'); // پیدا کردن سطر والدِ input
-            updateRowTotal(row);
-        }
-    });
-
+    // 3. رویداد برای جدول (حذف سطر و محاسبه قیمت)
     tableBody.addEventListener('click', function (e) {
-        // این رویداد زمانی اجرا می‌شود که روی دکمه حذف کلیک شود
         if (e.target.classList.contains('delete-btn')) {
-            const row = e.target.closest('tr');
-            row.remove(); // حذف سطر از جدول
-            updateGrandTotal(); // به‌روزرسانی جمع کل
+            e.target.closest('tr').remove();
+            updateGrandTotal();
+        }
+    });
+    tableBody.addEventListener('input', function (e) {
+        if (e.target.classList.contains('item-quantity') || e.target.classList.contains('item-unit-price')) {
+            updateRowTotal(e.target.closest('tr'));
         }
     });
 
-    // 4. تابع برای محاسبه قیمت کل یک سطر
-    function updateRowTotal(row) {
-        const quantityInput = row.querySelector('.item-quantity');
-        const priceInput = row.querySelector('.item-unit-price');
-        const totalCell = row.querySelector('.row-total');
+    // 4. رویدادهای جدید برای دکمه‌های رادیویی فاکتور
+    invoiceYesRadio.addEventListener('change', function () {
+        if (this.checked) {
+            fileUploadWrapper.classList.remove('hidden');
+        }
+    });
+    invoiceNoRadio.addEventListener('change', function () {
+        if (this.checked) {
+            fileUploadWrapper.classList.add('hidden');
+        }
+    });
 
-        const quantity = parseFloat(quantityInput.value) || 0;
-        const unitPrice = parseFloat(priceInput.value) || 0;
-
-        const rowTotal = quantity * unitPrice;
-        totalCell.textContent = rowTotal.toLocaleString('fa-IR'); // نمایش با جداکننده هزارگان فارسی
-        
-        updateGrandTotal(); // پس از هر تغییر، جمع کل را به‌روز کن
-    }
-
-    // 5. تابع برای محاسبه جمع کل فاکتور
-    function updateGrandTotal() {
-        let total = 0;
-        const allRows = tableBody.querySelectorAll('tr');
-        
-        allRows.forEach(row => {
-            const totalCell = row.querySelector('.row-total');
-            // تبدیل عدد فارسی با جداکننده به عدد انگلیسی برای محاسبه
-            const rowTotalValue = parseFloat(totalCell.textContent.replace(/٬/g, '')) || 0;
-            total += rowTotalValue;
-        });
-
-        grandTotalSpan.textContent = total.toLocaleString('fa-IR');
-    }
-
-    // 6. رویداد کلیک برای دکمه "ثبت درخواست"
+    // 5. رویداد کلیک برای "ثبت درخواست" (با منطق جدید فاکتور)
     submitBtn.addEventListener('click', function () {
-        if (!projectCodeInput.value) {
+        // اعتبارسنجی اولیه
+        if (!projectCodeInput.value.trim()) {
             alert('لطفاً کد پروژه را وارد کنید.');
+            projectCodeInput.focus();
             return;
         }
 
+        // جمع‌آوری اطلاعات اقلام
         const items = [];
-        const allRows = tableBody.querySelectorAll('tr');
-
-        allRows.forEach(row => {
-            const title = row.querySelector('.item-title').value;
+        tableBody.querySelectorAll('tr').forEach(row => {
+            const title = row.querySelector('.item-title').value.trim();
             const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
             const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
-
             if (title && quantity > 0 && unitPrice > 0) {
-                items.push({
-                    title: title,
-                    quantity: quantity,
-                    unitPrice: unitPrice,
-                    totalPrice: quantity * unitPrice
-                });
+                items.push({ title, quantity, unitPrice, totalPrice: quantity * unitPrice });
             }
         });
 
@@ -108,26 +87,60 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('حداقل یک قلم کالا با مشخصات کامل وارد کنید.');
             return;
         }
+        
+        // اعتبارسنجی بخش فاکتور
+        const hasInvoice = invoiceYesRadio.checked;
+        const invoiceFile = invoiceFileInput.files[0];
 
+        if (hasInvoice && !invoiceFile) {
+            alert('شما گزینه "فاکتور دارد" را انتخاب کرده‌اید، لطفاً فایل فاکتور را بارگذاری کنید.');
+            return;
+        }
+
+        // ساخت آبجکت نهایی داده‌ها
         const purchaseData = {
-            projectCode: projectCodeInput.value,
+            projectCode: projectCodeInput.value.trim(),
             date: currentDateSpan.textContent,
             grandTotal: parseFloat(grandTotalSpan.textContent.replace(/٬/g, '')),
-            items: items
+            items: items,
+            invoiceInfo: {
+                hasInvoice: hasInvoice,
+                // اگر فایلی وجود داشته باشد، اطلاعات آن را ذخیره می‌کنیم
+                fileName: hasInvoice && invoiceFile ? invoiceFile.name : null,
+                fileSize: hasInvoice && invoiceFile ? invoiceFile.size : null,
+                fileType: hasInvoice && invoiceFile ? invoiceFile.type : null
+            }
         };
 
-        // نمایش داده نهایی در کنسول (در یک پروژه واقعی، این داده به سرور ارسال می‌شود)
-        console.log('داده‌های نهایی برای ارسال به سرور:');
+        // نمایش داده نهایی در کنسول
+        console.log('--- داده‌های نهایی برای ارسال به سرور ---');
         console.log(JSON.stringify(purchaseData, null, 2));
+        if (hasInvoice && invoiceFile) {
+            console.log('فایل فاکتور انتخاب شده:', invoiceFile);
+            // در یک پروژه واقعی، شما باید `purchaseData` و `invoiceFile` را با استفاده از FormData به سرور ارسال کنید.
+        }
 
-        alert('درخواست شما با موفقیت آماده شد! (داده‌ها در کنسول نمایش داده شده‌اند)');
-        
-        // در صورت تمایل می‌توانید پس از ثبت، برنامک را ببندید
-        // eitaa.close();
+        alert('درخواست با موفقیت آماده شد! (برای مشاهده جزئیات، کنسول مرورگر را باز کنید)');
     });
 
-    // 7. رویداد کلیک برای بستن برنامک
-    closeBtn.addEventListener('click', function () {
-        eitaa.close();
-    });
+    // 6. رویداد کلیک برای بستن برنامک
+    closeBtn.addEventListener('click', () => eitaa.close());
+
+    // --- توابع کمکی ---
+    function updateRowTotal(row) {
+        const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+        const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+        const totalCell = row.querySelector('.row-total');
+        totalCell.textContent = (quantity * unitPrice).toLocaleString('fa-IR');
+        updateGrandTotal();
+    }
+
+    function updateGrandTotal() {
+        let total = 0;
+        tableBody.querySelectorAll('tr').forEach(row => {
+            const rowTotalValue = parseFloat(row.querySelector('.row-total').textContent.replace(/٬/g, '')) || 0;
+            total += rowTotalValue;
+        });
+        grandTotalSpan.textContent = total.toLocaleString('fa-IR');
+    }
 });
