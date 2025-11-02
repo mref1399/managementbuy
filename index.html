@@ -3,45 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>برنامک نمونه ایتا</title>
+    <title>فرم درخواست خرید</title>
     <!-- اتصال فایل استایل (CSS) -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- کانتینر اصلی برنامه -->
     <div class="container">
         <header>
-            <h1>برنامک نمونه ایتا</h1>
-            <p class="subtitle">نمایش اطلاعات با JS SDK</p>
+            <h1>فرم درخواست خرید</h1>
+            <p class="subtitle">لطفاً موارد زیر را با دقت تکمیل کنید.</p>
         </header>
 
-        <!-- بخش نمایش وضعیت -->
-        <div id="status" class="status-info">در حال اتصال به ایتا...</div>
-
-        <!-- بخش نمایش اطلاعات کاربر -->
-        <div id="userInfo" class="user-info-card hidden">
-            <p><strong>نام:</strong> <span id="firstName"></span></p>
-            <p><strong>نام خانوادگی:</strong> <span id="lastName"></span></p>
-            <p><strong>نام کاربری:</strong> <span id="username"></span></p>
+        <!-- بخش اطلاعات کلی فاکتور -->
+        <div class="form-group">
+            <div class="form-row">
+                <label for="projectCode">کد پروژه:</label>
+                <input type="text" id="projectCode" placeholder="مثال: P-1404-08">
+            </div>
+            <div class="form-row">
+                <label>تاریخ ثبت:</label>
+                <span id="currentDate" class="date-display"></span>
+            </div>
         </div>
 
-        <!-- بخش دکمه‌های عملیاتی -->
+        <!-- جدول اقلام خرید -->
+        <div class="table-container">
+            <table id="purchaseTable">
+                <thead>
+                    <tr>
+                        <th>عنوان کالا</th>
+                        <th>تعداد</th>
+                        <th>قیمت واحد</th>
+                        <th>قیمت کل</th>
+                        <th>حذف</th>
+                    </tr>
+                </thead>
+                <tbody id="purchaseTableBody">
+                    <!-- سطرها به صورت پویا با جاوااسکریپت اضافه می‌شوند -->
+                </tbody>
+            </table>
+        </div>
+
+        <button id="addItemBtn" class="btn-add-item">افزودن قلم جدید +</button>
+
+        <!-- بخش جمع کل فاکتور -->
+        <div class="summary">
+            <h2>جمع کل فاکتور: <span id="grandTotal">۰</span> ریال</h2>
+        </div>
+
+        <!-- دکمه‌های عملیاتی نهایی -->
         <div class="actions">
-            <button id="getUserBtn" disabled>دریافت اطلاعات من</button>
-            <button id="closeBtn">بستن برنامک</button>
+            <button id="submitBtn" class="btn-primary">ثبت درخواست</button>
+            <button id="closeBtn" class="btn-secondary">انصراف و بستن</button>
         </div>
+
     </div>
 
-    <!-- 
-      مهم‌ترین بخش: فراخوانی کیت توسعه نرم‌افزار ایتا (JS SDK) 
-      این اسکریپت باید حتما قبل از فایل app.js شما قرار بگیرد.
-    -->
+    <!-- SDK ایتا و اسکریپت اصلی برنامه -->
     <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
-    
-    <!-- اتصال فایل منطق برنامه (JavaScript) -->
     <script src="app.js"></script>
 
 </body>
 </html>
-
