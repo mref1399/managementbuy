@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فرم درخواست خرید</title>
-    <!-- اتصال فایل استایل (CSS) -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,7 +14,7 @@
             <p class="subtitle">لطفاً موارد زیر را با دقت تکمیل کنید.</p>
         </header>
 
-        <!-- بخش اطلاعات کلی فاکتور -->
+        <!-- اطلاعات کلی فاکتور -->
         <div class="form-group">
             <div class="form-row">
                 <label for="projectCode">کد پروژه:</label>
@@ -47,12 +46,29 @@
 
         <button id="addItemBtn" class="btn-add-item">افزودن قلم جدید +</button>
 
-        <!-- بخش جمع کل فاکتور -->
+        <!-- بخش جدید: سوال در مورد فاکتور -->
+        <div class="invoice-section">
+            <label class="invoice-question">آیا فاکتور رسمی دارد؟</label>
+            <div class="radio-group">
+                <input type="radio" id="invoiceYes" name="hasInvoice" value="yes">
+                <label for="invoiceYes">بله</label>
+                <input type="radio" id="invoiceNo" name="hasInvoice" value="no" checked>
+                <label for="invoiceNo">خیر</label>
+            </div>
+        </div>
+        
+        <!-- بخش جدید: بارگذاری فایل (در ابتدا مخفی است) -->
+        <div id="fileUploadWrapper" class="file-upload-wrapper hidden">
+            <label for="invoiceFile">فایل فاکتور را انتخاب کنید:</label>
+            <input type="file" id="invoiceFile">
+        </div>
+
+        <!-- جمع کل فاکتور -->
         <div class="summary">
             <h2>جمع کل فاکتور: <span id="grandTotal">۰</span> ریال</h2>
         </div>
 
-        <!-- دکمه‌های عملیاتی نهایی -->
+        <!-- دکمه‌های عملیاتی -->
         <div class="actions">
             <button id="submitBtn" class="btn-primary">ثبت درخواست</button>
             <button id="closeBtn" class="btn-secondary">انصراف و بستن</button>
@@ -60,7 +76,6 @@
 
     </div>
 
-    <!-- SDK ایتا و اسکریپت اصلی برنامه -->
     <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
     <script src="app.js"></script>
 
