@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فرم درخواست خرید</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
 </head>
 <body>
 
@@ -14,7 +15,6 @@
             <p class="subtitle">لطفاً موارد زیر را با دقت تکمیل کنید.</p>
         </header>
 
-        <!-- اطلاعات کلی فاکتور -->
         <div class="form-group">
             <div class="form-row">
                 <label for="projectCode">کد پروژه:</label>
@@ -22,12 +22,10 @@
             </div>
             <div class="form-row">
                 <label>تاریخ ثبت:</label>
-                <!-- این قسمت به صورت خودکار توسط جاوااسکریپت پر می‌شود -->
                 <span id="currentDate" class="date-display"></span>
             </div>
         </div>
 
-        <!-- جدول اقلام خرید -->
         <div class="table-container">
             <table id="purchaseTable">
                 <thead>
@@ -39,15 +37,12 @@
                         <th>حذف</th>
                     </tr>
                 </thead>
-                <tbody id="purchaseTableBody">
-                    <!-- سطرها به صورت پویا با جاوااسکریپت اضافه می‌شوند -->
-                </tbody>
+                <tbody id="purchaseTableBody"></tbody>
             </table>
         </div>
 
         <button id="addItemBtn" class="btn-add-item">افزودن قلم جدید +</button>
 
-        <!-- بخش سوال در مورد فاکتور -->
         <div class="invoice-section">
             <label class="invoice-question">آیا فاکتور رسمی دارد؟</label>
             <div class="radio-group">
@@ -58,31 +53,25 @@
             </div>
         </div>
         
-        <!-- بخش بارگذاری فایل (در ابتدا مخفی است) -->
         <div id="fileUploadWrapper" class="file-upload-wrapper hidden">
             <label for="invoiceFile">فایل فاکتور را انتخاب کنید:</label>
             <input type="file" id="invoiceFile">
         </div>
 
-        <!-- جمع کل فاکتور -->
         <div class="summary">
             <h2>جمع کل فاکتور: <span id="grandTotal">۰</span> ریال</h2>
         </div>
 
-        <!-- دکمه‌های عملیاتی -->
         <div class="actions">
             <button id="submitBtn" class="btn-primary">ثبت درخواست</button>
             <button id="closeBtn" class="btn-secondary">انصراف و بستن</button>
         </div>
-
     </div>
 
     <!-- 
-        *** نکته کلیدی اصلاحیه ***
-        اسکریپت‌ها به انتهای بادی منتقل شدند تا تضمین شود بعد از بارگذاری کامل HTML اجرا می‌شوند.
-        این کار هر دو مشکل تاریخ و دکمه افزودن را حل می‌کند.
+      نکته کلیدی: اسکریپت در انتهای بادی قرار گرفته تا تضمین شود 
+      تمام عناصر HTML قبل از اجرای جاوااسکریپت بارگذاری شده‌اند.
     -->
-    <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
     <script src="app.js"></script>
 
 </body>
