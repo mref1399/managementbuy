@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // مقداردهی اولیه
     initializeForm();
+    
+    // بارگذاری داده‌های قبلی (اگر وجود دارد)
+    loadSavedData();
 
     // اتصال رویدادها
     addItemBtn.addEventListener('click', addItemRow);
@@ -31,36 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeForm() {
     try {
-        // بررسی وجود moment-jalaali
-        if (typeof moment === 'undefined') {
-            console.error("❌ کتابخانه moment یافت نشد!");
-            alert("خطا: کتابخانه تاریخ بارگذاری نشده است");
-            return;
-        }
-
-        // تنظیم تاریخ شمسی با moment-jalaali
-        const now = moment();
-        const jalaliYear = now.jYear();
-        const jalaliMonth = String(now.jMonth() + 1).padStart(2, '0'); // jMonth از 0 شروع می‌شود
-        const jalaliDay = String(now.jDate()).padStart(2, '0');
-        const jalaliDate = `${jalaliYear}/${jalaliMonth}/${jalaliDay}`;
-        
-        document.getElementById('requestDate').value = jalaliDate;
-        console.log("✅ تاریخ شمسی تنظیم شد:", jalaliDate);
-        console.log("📅 سال:", jalaliYear, "ماه:", jalaliMonth, "روز:", jalaliDay);
-
-        // مخفی کردن فیلد آپلود فاکتور
-        toggleInvoiceUpload();
-    } catch(e) {
-        console.error("❌ خطا در مقداردهی اولیه:", e);
-        // اگر moment-jalaali کار نکرد، از روش دستی استفاده کن
-        fallbackJalaliDate();
-    }
-}
-
-// روش جایگزین برای تاریخ شمسی (بدون moment-jalaali)
-function fallbackJalaliDate() {
-    try {
+        // تنظیم تاریخ شمسی
         const today = new Date();
         const formatter = new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
             year: 'numeric',
@@ -70,10 +44,92 @@ function fallbackJalaliDate() {
         
         const jalaliDate = formatter.format(today).replace(/\u200F/g, '');
         document.getElementById('requestDate').value = jalaliDate;
-        console.log("✅ تاریخ شمسی (روش جایگزین):", jalaliDate);
+        console.log("✅ تاریخ شمسی تنظیم شد:", jalaliDate);
+
+        // مخفی کردن فیلد آپلود فاکتور
+        toggleInvoiceUpload();
     } catch(e) {
-        console.error("❌ خطا در تاریخ جایگزین:", e);
+        console.error("❌ خطا در مقداردهی اولیه:", e);
         document.getElementById('requestDate').value = "1404/08/12";
+    }
+}
+
+// ذخیره خودکار داده‌ها
+function autoSaveData() {
+    try {
+        const rows = document.querySelectorAll('#itemsTable tbody tr');
+        const items = [];
+        
+        rows.forEach(row => {
+            const itemName = row.querySelector('input[name="itemName"]').value.trim();
+            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
+            
+            if (itemName) {
+                items.push({ name: itemName, quantity, price });
+            }
+        });
+
+        const formData = {
+            projectName: document.getElementById('projectName').value.trim(),
+            requestDate: document.getElementById('requestDate').value,
+            hasInvoice: document.querySelector('input[name="hasInvoice"]:checked').value,
+            description: document.getElementById('description').value.trim(),
+            items: items,
+            savedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem('purchaseRequest', JSON.stringify(formData));
+        console.log("💾 داده‌ها ذخیره شدند");
+    } catch(e) {
+        console.error("❌ خطا در ذخیره خودکار:", e);
+    }
+}
+
+// بارگذاری داده‌های ذخیره شده
+function loadSavedData() {
+    try {
+        const savedData = localStorage.getItem('purchaseRequest');
+        if (!savedData) return;
+
+        const data = JSON.parse(savedData);
+        console.log("📂 بارگذاری داده‌های قبلی:", data);
+
+        // بازیابی فیلدها
+        if (data.projectName) document.getElementById('projectName').value = data.projectName;
+        if (data.description) document.getElementById('description').value = data.description;
+        
+        // بازیابی وضعیت فاکتور
+        const invoiceRadio = document.querySelector(`input[name="hasInvoice"][value="${data.hasInvoice}"]`);
+        if (invoiceRadio) invoiceRadio.checked = true;
+        toggleInvoiceUpload();
+
+        // بازیابی آیتم‌ها
+        if (data.items && data.items.length > 0) {
+            const tableBody = document.querySelector('#itemsTable tbody');
+            tableBody.innerHTML = '';
+            
+            data.items.forEach(item => {
+                const newRow = tableBody.insertRow();
+                newRow.innerHTML = `
+                    <td><input type="text" name="itemName" class="form-control" required value="${item.name}"></td>
+                    <td><input type="number" name="quantity" class="form-control quantity" min="1" value="${item.quantity}" required></td>
+                    <td><input type="number" name="price" class="form-control price" min="0" value="${item.price}" required></td>
+                    <td class="total-price">${(item.quantity * item.price).toLocaleString('fa-IR')}</td>
+                    <td><button type="button" class="btn btn-danger btn-sm remove-item-btn">حذف</button></td>
+                `;
+
+                newRow.querySelector('.remove-item-btn').addEventListener('click', (e) => {
+                    e.target.closest('tr').remove();
+                    updateGrandTotal();
+                    autoSaveData();
+                });
+            });
+
+            updateGrandTotal();
+        }
+    } catch(e) {
+        console.error("❌ خطا در بارگذاری داده‌ها:", e);
     }
 }
 
@@ -89,21 +145,22 @@ function addItemRow() {
         <td><button type="button" class="btn btn-danger btn-sm remove-item-btn">حذف</button></td>
     `;
 
-    // رویداد حذف
     newRow.querySelector('.remove-item-btn').addEventListener('click', (e) => {
         e.target.closest('tr').remove();
         updateGrandTotal();
+        autoSaveData();
         console.log("🗑️ ردیف حذف شد");
     });
 
-    // محاسبه اولیه
     updateRowTotal(newRow);
+    autoSaveData();
 }
 
 function handleTableInput(event) {
     if (event.target.classList.contains('quantity') || event.target.classList.contains('price')) {
         const row = event.target.closest('tr');
         updateRowTotal(row);
+        autoSaveData();
     }
 }
 
@@ -137,21 +194,13 @@ function toggleInvoiceUpload() {
         fileUploadDiv.classList.add('hidden');
         fileInput.required = false;
     }
+    autoSaveData();
 }
 
 function submitForm(event) {
     event.preventDefault();
-    console.log("📤 شروع ارسال فرم");
+    console.log("📝 ثبت درخواست خرید");
 
-    // بررسی اتصال اینترنت
-    if (!navigator.onLine) {
-        alert('⚠️ اتصال اینترنت خود را بررسی کنید');
-        return;
-    }
-
-    // جمع‌آوری داده‌ها
-    const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
-    
     // بررسی وجود آیتم
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     if (rows.length === 0) {
@@ -159,23 +208,10 @@ function submitForm(event) {
         return;
     }
 
-    // ساخت جدول HTML برای ارسال به n8n
-    let tableHTML = `
-    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: Tahoma, Arial; direction: rtl;">
-        <thead>
-            <tr style="background-color: #f2f2f2;">
-                <th style="text-align: center;">ردیف</th>
-                <th style="text-align: center;">شرح کالا/خدمات</th>
-                <th style="text-align: center;">تعداد</th>
-                <th style="text-align: center;">مبلغ واحد (ریال)</th>
-                <th style="text-align: center;">مبلغ کل (ریال)</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
-
+    // جمع‌آوری داده‌ها
+    const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
     let grandTotal = 0;
-    let rowNumber = 1;
+    const items = [];
 
     rows.forEach(row => {
         const itemName = row.querySelector('input[name="itemName"]').value.trim();
@@ -184,113 +220,80 @@ function submitForm(event) {
         const total = quantity * price;
         grandTotal += total;
 
-        tableHTML += `
-            <tr>
-                <td style="text-align: center;">${rowNumber}</td>
-                <td style="text-align: right; padding-right: 10px;">${itemName}</td>
-                <td style="text-align: center;">${quantity.toLocaleString('fa-IR')}</td>
-                <td style="text-align: center;">${price.toLocaleString('fa-IR')}</td>
-                <td style="text-align: center;">${total.toLocaleString('fa-IR')}</td>
-            </tr>
-        `;
-        rowNumber++;
+        items.push({
+            name: itemName,
+            quantity: quantity,
+            price: price,
+            total: total
+        });
     });
 
-    tableHTML += `
-        </tbody>
-        <tfoot>
-            <tr style="background-color: #f9f9f9; font-weight: bold;">
-                <td colspan="4" style="text-align: left; padding-right: 10px;">جمع کل:</td>
-                <td style="text-align: center;">${grandTotal.toLocaleString('fa-IR')} ریال</td>
-            </tr>
-        </tfoot>
-    </table>
-    `;
-
-    // ساخت داده نهایی برای ارسال
     const formData = {
         projectName: document.getElementById('projectName').value.trim(),
         requestDate: document.getElementById('requestDate').value,
         hasInvoice: hasInvoice,
         description: document.getElementById('description').value.trim(),
-        itemsTable: tableHTML,  // جدول HTML
+        items: items,
         totalPrice: grandTotal,
-        totalPriceFormatted: grandTotal.toLocaleString('fa-IR') + ' ریال'
+        status: 'pending',
+        submittedAt: new Date().toISOString()
     };
 
-    // غیرفعال کردن دکمه
-    const submitButton = document.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.textContent = 'در حال ارسال...';
-
-    // آدرس webhook
-    const n8nWebhookURL = 'https://mref1365.darkube.app/webhook-test/Buy';
+    // ذخیره نهایی در localStorage با کلید منحصربفرد
+    const requestId = 'REQ_' + Date.now();
     
-    console.log('🔵 ارسال به:', n8nWebhookURL);
-    console.log('🔵 داده‌ها:', JSON.stringify(formData, null, 2));
-    console.log('📊 جدول HTML:', tableHTML);
-
-    // ارسال با timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    fetch(n8nWebhookURL, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-        signal: controller.signal,
-        mode: 'cors'
-    })
-    .then(response => {
-        clearTimeout(timeoutId);
-        console.log('✅ پاسخ دریافت شد - وضعیت:', response.status);
+    try {
+        // ذخیره درخواست فعلی
+        localStorage.setItem(requestId, JSON.stringify(formData));
         
-        if (!response.ok) {
-            return response.text().then(text => {
-                console.error('❌ پاسخ خطا:', text);
-                throw new Error(`خطای سرور: ${response.status}`);
-            });
-        }
-        
-        return response.text().then(text => {
-            console.log('✅ پاسخ خام:', text);
-            return text ? JSON.parse(text) : {};
+        // به‌روزرسانی لیست درخواست‌ها
+        let allRequests = JSON.parse(localStorage.getItem('allPurchaseRequests') || '[]');
+        allRequests.push({
+            id: requestId,
+            projectName: formData.projectName,
+            totalPrice: formData.totalPrice,
+            date: formData.requestDate,
+            submittedAt: formData.submittedAt,
+            status: 'pending'
         });
-    })
-    .then(data => {
-        console.log('✅ موفقیت:', data);
-        alert("✅ درخواست با موفقیت ثبت شد!");
+        localStorage.setItem('allPurchaseRequests', JSON.stringify(allRequests));
+
+        // پاک کردن ذخیره موقت
+        localStorage.removeItem('purchaseRequest');
+
+        console.log("✅ درخواست با موفقیت ذخیره شد:", requestId);
+        console.log("📊 داده‌های ذخیره شده:", formData);
+
+        // نمایش پیام موفقیت با جزئیات
+        const message = `
+✅ درخواست با موفقیت ثبت شد!
+
+🆔 شماره درخواست: ${requestId}
+📋 پروژه: ${formData.projectName}
+💰 مبلغ کل: ${grandTotal.toLocaleString('fa-IR')} ریال
+📅 تاریخ: ${formData.requestDate}
+
+درخواست شما در حالت انتظار قرار گرفت و پس از تأیید، فرآیند خرید انجام خواهد شد.
+        `;
         
+        alert(message);
+
         // بستن برنامک ایتا
         if (typeof Eitaa !== 'undefined' && Eitaa.jsSDK) {
             setTimeout(() => {
                 Eitaa.jsSDK.closeApp();
-            }, 1500);
+            }, 2000);
         }
-    })
-    .catch((error) => {
-        clearTimeout(timeoutId);
-        console.error('❌ خطا:', error);
-        
-        let errorMessage = '❌ خطا در ارسال:\n';
-        
-        if (error.name === 'AbortError') {
-            errorMessage += 'زمان انتظار تمام شد';
-        } else if (error.message.includes('Failed to fetch')) {
-            errorMessage += 'مشکل در اتصال به سرور\n';
-            errorMessage += 'لطفاً:\n';
-            errorMessage += '• اتصال اینترنت را بررسی کنید\n';
-            errorMessage += '• با پشتیبانی تماس بگیرید';
-        } else {
-            errorMessage += error.message;
-        }
-        
-        alert(errorMessage);
-    })
-    .finally(() => {
-        submitButton.disabled = false;
-        submitButton.textContent = 'ثبت و ارسال درخواست';
-    });
+
+    } catch(e) {
+        console.error("❌ خطا در ذخیره درخواست:", e);
+        alert("❌ خطا در ذخیره‌سازی. لطفاً مجدداً تلاش کنید.");
+    }
 }
+
+// ذخیره خودکار هنگام تغییر فیلدها
+document.addEventListener('change', (e) => {
+    if (e.target.closest('#purchaseForm')) {
+        autoSaveData();
+    }
+});
