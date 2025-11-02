@@ -4,84 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فرم درخواست خرید</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://eitaa.com/eitaa-javascript-sdk/eitaa-js-sdk.js"></script>
+    <!-- اضافه کردن کتابخانه moment-jalaali برای تاریخ شمسی -->
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment-jalaali@0.10.0/moment-jalaali.js"></script>
 </head>
 <body>
-
-    <div class="container mt-4">
-        <div class="header-logo text-center mb-4">
-            <h4>فرم درخواست خرید</h4>
-        </div>
+    <div class="container">
+        <header>
+            <h1>فرم درخواست خرید</h1>
+            <p class="subtitle">لطفاً اطلاعات زیر را با دقت تکمیل نمایید</p>
+        </header>
 
         <form id="purchaseForm">
-            <!-- اطلاعات کلی پروژه -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label for="projectName" class="form-label">کد پروژه</label>
-                    <input type="text" class="form-control" id="projectName" readonly>
+            <div class="form-group">
+                <div class="form-row">
+                    <label>کد پروژه</label>
+                    <input type="text" id="projectName" readonly class="date-display">
                 </div>
-                <div class="col-md-6">
-                    <label for="requestDate" class="form-label">تاریخ درخواست</label>
-                    <input type="text" class="form-control" id="requestDate" readonly>
+                <div class="form-row">
+                    <label>تاریخ درخواست</label>
+                    <input type="text" id="requestDate" readonly class="date-display">
                 </div>
             </div>
 
-            <!-- جدول اقلام خرید -->
-            <h5 class="mt-4">اقلام مورد نیاز</h5>
-            <div class="table-responsive">
-                <table id="itemsTable" class="table table-bordered text-center">
+            <h3>اقلام مورد نیاز</h3>
+            <div class="table-container">
+                <table id="itemsTable">
                     <thead>
                         <tr>
-                            <th style="width: 40%;">شرح کالا/خدمات</th>
-                            <th style="width: 15%;">تعداد</th>
-                            <th style="width: 20%;">مبلغ واحد (ریال)</th>
-                            <th style="width: 20%;">مبلغ کل (ریال)</th>
-                            <th style="width: 5%;">حذف</th>
+                            <th>شرح کالا/خدمات</th>
+                            <th>تعداد</th>
+                            <th>مبلغ واحد (ریال)</th>
+                            <th>مبلغ کل (ریال)</th>
+                            <th>حذف</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- ردیف‌ها به صورت پویا اضافه می‌شوند -->
+                        <!-- ردیف‌های جدول اینجا اضافه می‌شوند -->
                     </tbody>
                 </table>
             </div>
-            <button type="button" id="addItemBtn" class="btn btn-success btn-sm mb-3">افزودن ردیف</button>
 
-            <!-- جمع کل فاکتور -->
-            <div class="d-flex justify-content-end align-items-center mt-3 p-2 bg-light rounded">
-                <h5 class="mb-0">جمع کل مبلغ: <span id="grandTotal" class="fw-bold">0</span> ریال</h5>
+            <button type="button" id="addItemBtn" class="btn-add-item">+ افزودن ردیف</button>
+
+            <div class="summary">
+                <h2>جمع کل مبلغ: <span id="grandTotal">0</span> ریال</h2>
             </div>
 
-            <!-- سوال فاکتور و آپلود فایل -->
-            <div class="row g-3 mt-3">
-                <div class="col-md-6">
-                    <label for="invoiceQuestion" class="form-label">آیا فاکتور دارد؟</label>
-                    <select class="form-select" id="invoiceQuestion">
-                        <option value="no" selected>خیر</option>
-                        <option value="yes">بله</option>
-                    </select>
+            <div class="invoice-section">
+                <label class="invoice-question">آیا فاکتور دارد؟</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="hasInvoice" id="invoiceQuestion" value="no" checked>
+                        خیر
+                    </label>
+                    <label>
+                        <input type="radio" name="hasInvoice" value="yes">
+                        بله
+                    </label>
                 </div>
-                <div class="col-md-6" id="fileUploadDiv" style="display: none;">
-                    <label for="invoiceFile" class="form-label">فایل فاکتور</label>
-                    <input class="form-control" type="file" id="invoiceFile">
+
+                <div id="fileUploadDiv" class="file-upload-wrapper hidden">
+                    <label>فایل فاکتور</label>
+                    <input type="file" id="invoiceFile" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </div>
 
-            <!-- توضیحات -->
-            <div class="mt-3">
-                <label for="description" class="form-label">توضیحات (اختیاری)</label>
-                <textarea class="form-control" id="description" rows="3"></textarea>
+            <div class="form-group">
+                <div class="form-row" style="width: 100%;">
+                    <label>توضیحات (اختیاری)</label>
+                    <textarea id="description" rows="4" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;"></textarea>
+                </div>
             </div>
 
-            <!-- دکمه ثبت -->
-            <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-primary">ثبت و ارسال درخواست</button>
+            <div class="actions">
+                <button type="submit" class="btn-primary">ثبت و ارسال درخواست</button>
             </div>
         </form>
     </div>
 
-    <!-- این خط باید آخرین عنصر داخل تگ body باشد -->
     <script src="app.js"></script>
 </body>
 </html>
