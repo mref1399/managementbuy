@@ -22,6 +22,7 @@
             </div>
             <div class="form-row">
                 <label>تاریخ ثبت:</label>
+                <!-- این قسمت به صورت خودکار توسط جاوااسکریپت پر می‌شود -->
                 <span id="currentDate" class="date-display"></span>
             </div>
         </div>
@@ -46,7 +47,7 @@
 
         <button id="addItemBtn" class="btn-add-item">افزودن قلم جدید +</button>
 
-        <!-- بخش جدید: سوال در مورد فاکتور -->
+        <!-- بخش سوال در مورد فاکتور -->
         <div class="invoice-section">
             <label class="invoice-question">آیا فاکتور رسمی دارد؟</label>
             <div class="radio-group">
@@ -57,7 +58,7 @@
             </div>
         </div>
         
-        <!-- بخش جدید: بارگذاری فایل (در ابتدا مخفی است) -->
+        <!-- بخش بارگذاری فایل (در ابتدا مخفی است) -->
         <div id="fileUploadWrapper" class="file-upload-wrapper hidden">
             <label for="invoiceFile">فایل فاکتور را انتخاب کنید:</label>
             <input type="file" id="invoiceFile">
@@ -76,6 +77,11 @@
 
     </div>
 
+    <!-- 
+        *** نکته کلیدی اصلاحیه ***
+        اسکریپت‌ها به انتهای بادی منتقل شدند تا تضمین شود بعد از بارگذاری کامل HTML اجرا می‌شوند.
+        این کار هر دو مشکل تاریخ و دکمه افزودن را حل می‌کند.
+    -->
     <script src="https://eitaa.com/eitaa-js-sdk.js"></script>
     <script src="app.js"></script>
 
