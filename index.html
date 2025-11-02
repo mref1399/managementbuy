@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فرم درخواست خرید</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- اضافه کردن کتابخانه moment-jalaali برای تاریخ شمسی -->
+    
+    <!-- کتابخانه‌های تاریخ شمسی -->
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment-jalaali@0.10.0/moment-jalaali.js"></script>
 </head>
@@ -20,7 +21,7 @@
             <div class="form-group">
                 <div class="form-row">
                     <label>کد پروژه</label>
-                    <input type="text" id="projectName" readonly class="date-display">
+                    <input type="text" id="projectName" required placeholder="کد پروژه را وارد کنید">
                 </div>
                 <div class="form-row">
                     <label>تاریخ درخواست</label>
@@ -28,31 +29,32 @@
                 </div>
             </div>
 
-            <h3>اقلام مورد نیاز</h3>
-            <div class="table-container">
-                <table id="itemsTable">
-                    <thead>
-                        <tr>
-                            <th>شرح کالا/خدمات</th>
-                            <th>تعداد</th>
-                            <th>مبلغ واحد (ریال)</th>
-                            <th>مبلغ کل (ریال)</th>
-                            <th>حذف</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- ردیف‌های جدول اینجا اضافه می‌شوند -->
-                    </tbody>
-                </table>
-            </div>
-
-            <button type="button" id="addItemBtn" class="btn-add-item">+ افزودن ردیف</button>
+            <section>
+                <h2>اقلام مورد نیاز</h2>
+                <div class="table-container">
+                    <table id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th>شرح کالا/خدمات</th>
+                                <th>تعداد</th>
+                                <th>مبلغ واحد (ریال)</th>
+                                <th>مبلغ کل (ریال)</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- ردیف‌ها به صورت پویا اضافه می‌شوند -->
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" id="addItemBtn" class="btn-add-item">+ افزودن ردیف</button>
+            </section>
 
             <div class="summary">
                 <h2>جمع کل مبلغ: <span id="grandTotal">0</span> ریال</h2>
             </div>
 
-            <div class="invoice-section">
+            <section class="invoice-section">
                 <label class="invoice-question">آیا فاکتور دارد؟</label>
                 <div class="radio-group">
                     <label>
@@ -64,19 +66,16 @@
                         بله
                     </label>
                 </div>
-
                 <div id="fileUploadDiv" class="file-upload-wrapper hidden">
-                    <label>فایل فاکتور</label>
-                    <input type="file" id="invoiceFile" accept=".pdf,.jpg,.jpeg,.png">
+                    <label for="invoiceFile">فایل فاکتور</label>
+                    <input type="file" id="invoiceFile" accept="image/*,.pdf">
                 </div>
-            </div>
+            </section>
 
-            <div class="form-group">
-                <div class="form-row" style="width: 100%;">
-                    <label>توضیحات (اختیاری)</label>
-                    <textarea id="description" rows="4" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;"></textarea>
-                </div>
-            </div>
+            <section>
+                <label for="description">توضیحات (اختیاری)</label>
+                <textarea id="description" rows="4" placeholder="توضیحات تکمیلی در صورت نیاز..."></textarea>
+            </section>
 
             <div class="actions">
                 <button type="submit" class="btn-primary">ثبت و ارسال درخواست</button>
