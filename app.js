@@ -152,15 +152,6 @@ function submitForm(event) {
     // جمع‌آوری داده‌ها
     const hasInvoice = document.querySelector('input[name="hasInvoice"]:checked').value;
     
-    const formData = {
-        projectName: document.getElementById('projectName').value.trim(),
-        requestDate: document.getElementById('requestDate').value,
-        hasInvoice: hasInvoice,
-        description: document.getElementById('description').value.trim(),
-        items: [],
-        totalPrice: 0
-    };
-
     // بررسی وجود آیتم
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     if (rows.length === 0) {
@@ -168,22 +159,64 @@ function submitForm(event) {
         return;
     }
 
-    // جمع‌آوری آیتم‌ها
+    // ساخت جدول HTML برای ارسال به n8n
+    let tableHTML = `
+    <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; font-family: Tahoma, Arial; direction: rtl;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="text-align: center;">ردیف</th>
+                <th style="text-align: center;">شرح کالا/خدمات</th>
+                <th style="text-align: center;">تعداد</th>
+                <th style="text-align: center;">مبلغ واحد (ریال)</th>
+                <th style="text-align: center;">مبلغ کل (ریال)</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+
     let grandTotal = 0;
+    let rowNumber = 1;
+
     rows.forEach(row => {
         const itemName = row.querySelector('input[name="itemName"]').value.trim();
         const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
         const price = parseFloat(row.querySelector('.price').value) || 0;
         const total = quantity * price;
         grandTotal += total;
-        formData.items.push({ 
-            name: itemName, 
-            quantity, 
-            price, 
-            total 
-        });
+
+        tableHTML += `
+            <tr>
+                <td style="text-align: center;">${rowNumber}</td>
+                <td style="text-align: right; padding-right: 10px;">${itemName}</td>
+                <td style="text-align: center;">${quantity.toLocaleString('fa-IR')}</td>
+                <td style="text-align: center;">${price.toLocaleString('fa-IR')}</td>
+                <td style="text-align: center;">${total.toLocaleString('fa-IR')}</td>
+            </tr>
+        `;
+        rowNumber++;
     });
-    formData.totalPrice = grandTotal;
+
+    tableHTML += `
+        </tbody>
+        <tfoot>
+            <tr style="background-color: #f9f9f9; font-weight: bold;">
+                <td colspan="4" style="text-align: left; padding-right: 10px;">جمع کل:</td>
+                <td style="text-align: center;">${grandTotal.toLocaleString('fa-IR')} ریال</td>
+            </tr>
+        </tfoot>
+    </table>
+    `;
+
+    // ساخت داده نهایی برای ارسال
+    const formData = {
+        projectName: document.getElementById('projectName').value.trim(),
+        requestDate: document.getElementById('requestDate').value,
+        hasInvoice: hasInvoice,
+        description: document.getElementById('description').value.trim(),
+        itemsTable: tableHTML,  // جدول HTML
+        totalPrice: grandTotal,
+        totalPriceFormatted: grandTotal.toLocaleString('fa-IR') + ' ریال'
+    };
 
     // غیرفعال کردن دکمه
     const submitButton = document.querySelector('button[type="submit"]');
@@ -195,6 +228,7 @@ function submitForm(event) {
     
     console.log('🔵 ارسال به:', n8nWebhookURL);
     console.log('🔵 داده‌ها:', JSON.stringify(formData, null, 2));
+    console.log('📊 جدول HTML:', tableHTML);
 
     // ارسال با timeout
     const controller = new AbortController();
